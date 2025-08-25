@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFDocument } from 'pdf-lib';
 import {
-  Upload,
   FileText,
   FileSignature as Signature,
   Download,
@@ -29,6 +28,8 @@ function App() {
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [pdfDimensions, setPdfDimensions] = useState({ width: 0, height: 0 });
 
+  const [downloadFileName, setDownloadFileName] = useState<string>(''); // custom file name
+
   const containerRef = useRef<HTMLDivElement>(null);
   const signatureRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +37,8 @@ function App() {
     const file = event.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       setPdfFile(file);
+      // Default naam input box me daal dena (without extension)
+      setDownloadFileName(file.name.replace('.pdf', ''));
       setDownloadComplete(false);
     }
   }, []);
@@ -116,7 +119,8 @@ function App() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'signed-document.pdf';
+      // ✅ custom naam ya default naam set karo
+      link.download = `${downloadFileName || 'signed-document'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -129,9 +133,8 @@ function App() {
     } finally {
       setIsDownloading(false);
     }
-  }, [pdfFile, signatureFile, signaturePosition, pdfDimensions, signatureSize]);
+  }, [pdfFile, signatureFile, signaturePosition, pdfDimensions, signatureSize, downloadFileName]);
 
-  const onDocumentLoadSuccess = useCallback(() => {}, []);
   const onPageLoadSuccess = useCallback((page: any) => {
     setPdfDimensions({
       width: page.width,
@@ -151,6 +154,7 @@ function App() {
 
         <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           <div className="lg:col-span-1 space-y-6">
+            {/* PDF Upload */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center mb-4">
                 <FileText className="w-6 h-6 text-blue-600 mr-2" />
@@ -162,8 +166,26 @@ function App() {
                 onChange={handlePdfUpload}
                 className="w-full"
               />
+
+              {pdfFile && (
+                <div className="mt-4 p-3 border rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-1">Uploaded PDF:</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{pdfFile.name}</p>
+
+                  <label className="block text-sm font-medium text-gray-700 mt-3">
+                    Download File Name
+                  </label>
+                  <input
+                    type="text"
+                    value={downloadFileName}
+                    onChange={(e) => setDownloadFileName(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  />
+                </div>
+              )}
             </div>
 
+            {/* Signature Upload */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center mb-4">
                 <Signature className="w-6 h-6 text-purple-600 mr-2" />
@@ -213,6 +235,7 @@ function App() {
               )}
             </div>
 
+            {/* Download Button */}
             {pdfFile && signatureFile && (
               <button
                 onClick={downloadSignedPdf}
@@ -245,6 +268,7 @@ function App() {
             )}
           </div>
 
+          {/* PDF Preview */}
           <div className="lg:col-span-2">
             <div
               ref={containerRef}
